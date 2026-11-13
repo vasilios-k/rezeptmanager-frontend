@@ -20,3 +20,17 @@ export interface Recipe {
   prepTimeMinutes: number
   servings: number
 }
+
+export interface CreateRecipeIngredientRequest {
+  ingredientName: string
+  quantity: number
+  unit: Unit
+}
+
+export interface CreateRecipeRequest {
+  title: string
+  ingredients: CreateRecipeIngredientRequest[]
+  instructions: string
+  prepTimeMinutes: number
+  servings: number
+}
