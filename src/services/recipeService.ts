@@ -1,4 +1,4 @@
-import type { CreateRecipeRequest, Recipe } from '@/types/recipe'
+import type { Recipe, RecipeRequest } from '@/types/recipe'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '')
 
@@ -24,7 +24,7 @@ export async function getRecipes(): Promise<Recipe[]> {
   return (await response.json()) as Recipe[]
 }
 
-export async function createRecipe(request: CreateRecipeRequest): Promise<Recipe> {
+export async function createRecipe(request: RecipeRequest): Promise<Recipe> {
   const response = await fetch(getRecipesUrl(), {
     method: 'POST',
     headers: {
@@ -36,6 +36,23 @@ export async function createRecipe(request: CreateRecipeRequest): Promise<Recipe
 
   if (!response.ok) {
     throw new Error(`Das Speichern ist fehlgeschlagen: HTTP ${response.status}`)
+  }
+
+  return (await response.json()) as Recipe
+}
+
+export async function updateRecipe(id: number, request: RecipeRequest): Promise<Recipe> {
+  const response = await fetch(`${getRecipesUrl()}/${id}`, {
+    method: 'PUT',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(request),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Das Aktualisieren ist fehlgeschlagen: HTTP ${response.status}`)
   }
 
   return (await response.json()) as Recipe

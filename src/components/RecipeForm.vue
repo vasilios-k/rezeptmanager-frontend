@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { createRecipe } from '@/services/recipeService'
-import type { CreateRecipeRequest, Recipe, Unit } from '@/types/recipe'
+import { computed, onMounted, ref } from 'vue'
+import { createRecipe, updateRecipe } from '@/services/recipeService'
+import type { Recipe, RecipeIngredient, RecipeRequest, Unit } from '@/types/recipe'
 import { unitLabels } from '@/utils/formatIngredient'
 
 interface IngredientFormRow {
@@ -11,29 +11,53 @@ interface IngredientFormRow {
   unit: Unit
 }
 
+const props = withDefaults(
+  defineProps<{
+    recipe?: Recipe | null
+  }>(),
+  {
+    recipe: null,
+  },
+)
+
 const emit = defineEmits<{
-  created: [recipe: Recipe]
+  saved: [recipe: Recipe]
   cancel: []
 }>()
 
 let nextIngredientKey = 0
 
-function createIngredientRow(): IngredientFormRow {
+function createIngredientRow(item?: RecipeIngredient): IngredientFormRow {
   return {
     key: nextIngredientKey++,
-    ingredientName: '',
-    quantity: 1,
-    unit: 'GRAM',
+    ingredientName: item?.ingredient.name ?? '',
+    quantity: item?.quantity ?? 1,
+    unit: item?.unit ?? 'GRAM',
   }
 }
 
-const title = ref('')
-const ingredients = ref<IngredientFormRow[]>([createIngredientRow()])
-const instructions = ref('')
-const prepTimeMinutes = ref<number | ''>(0)
-const servings = ref<number | ''>(1)
+const titleInput = ref<HTMLInputElement | null>(null)
+const title = ref(props.recipe?.title ?? '')
+const ingredients = ref<IngredientFormRow[]>(
+  props.recipe
+    ? props.recipe.ingredients.map((item) => createIngredientRow(item))
+    : [createIngredientRow()],
+)
+const instructions = ref(props.recipe?.instructions ?? '')
+const prepTimeMinutes = ref<number | ''>(props.recipe?.prepTimeMinutes ?? 0)
+const servings = ref<number | ''>(props.recipe?.servings ?? 1)
 const isSaving = ref(false)
 const errorMessage = ref('')
+
+const isEditing = computed(() => props.recipe !== null)
+
+const submitLabel = computed(() => {
+  if (isSaving.value) {
+    return 'Wird gespeichert …'
+  }
+
+  return isEditing.value ? 'Änderungen speichern' : 'Rezept speichern'
+})
 
 function addIngredient(): void {
   if (ingredients.value.length < 100) {
@@ -54,7 +78,7 @@ async function submitRecipe(): Promise<void> {
 
   errorMessage.value = ''
 
-  const request: CreateRecipeRequest = {
+  const request: RecipeRequest = {
     title: title.value.trim(),
     ingredients: ingredients.value.map((item) => ({
       ingredientName: item.ingredientName.trim().replace(/\s+/g, ' '),
@@ -85,8 +109,13 @@ async function submitRecipe(): Promise<void> {
   isSaving.value = true
 
   try {
-    const savedRecipe = await createRecipe(request)
-    emit('created', savedRecipe)
+    const recipeToEdit = props.recipe
+
+    const savedRecipe = recipeToEdit
+      ? await updateRecipe(recipeToEdit.id, request)
+      : await createRecipe(request)
+
+    emit('saved', savedRecipe)
   } catch (error) {
     console.error('Rezept konnte nicht gespeichert werden:', error)
     errorMessage.value =
@@ -95,6 +124,10 @@ async function submitRecipe(): Promise<void> {
     isSaving.value = false
   }
 }
+
+onMounted(() => {
+  titleInput.value?.focus()
+})
 </script>
 
 <template>
@@ -104,7 +137,10 @@ async function submitRecipe(): Promise<void> {
     :aria-busy="isSaving"
     @submit.prevent="submitRecipe"
   >
-    <h2 id="recipe-form-heading">Neues Rezept</h2>
+    <h2 id="recipe-form-heading">
+      {{ isEditing ? 'Rezept bearbeiten' : 'Neues Rezept' }}
+    </h2>
+
     <p class="form-description">Erfasse Zutaten, Mengen und Zubereitung.</p>
 
     <p v-if="errorMessage" class="form-error" role="alert">
@@ -116,6 +152,7 @@ async function submitRecipe(): Promise<void> {
         <label for="recipe-title">Rezeptname</label>
         <input
           id="recipe-title"
+          ref="titleInput"
           v-model="title"
           type="text"
           maxlength="200"
@@ -157,7 +194,7 @@ async function submitRecipe(): Promise<void> {
 
         <div v-for="(item, index) in ingredients" :key="item.key" class="ingredient-row">
           <div class="field ingredient-name">
-            <label :for="`ingredient-name-${item.key}`">Zutat {{ index + 1 }}</label>
+            <label :for="`ingredient-name-${item.key}`"> Zutat {{ index + 1 }} </label>
             <input
               :id="`ingredient-name-${item.key}`"
               v-model="item.ingredientName"
@@ -225,7 +262,7 @@ async function submitRecipe(): Promise<void> {
 
       <div class="form-actions">
         <button type="submit" class="primary-button">
-          {{ isSaving ? 'Wird gespeichert …' : 'Rezept speichern' }}
+          {{ submitLabel }}
         </button>
 
         <button type="button" class="secondary-button" @click="emit('cancel')">Abbrechen</button>

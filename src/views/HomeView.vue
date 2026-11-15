@@ -9,6 +9,7 @@ const recipes = ref<Recipe[]>([])
 const isLoading = ref(true)
 const errorMessage = ref('')
 const isFormOpen = ref(false)
+const editingRecipe = ref<Recipe | null>(null)
 const successMessage = ref('')
 
 async function loadRecipes(): Promise<void> {
@@ -25,14 +26,31 @@ async function loadRecipes(): Promise<void> {
   }
 }
 
-function openForm(): void {
+function openCreateForm(): void {
   successMessage.value = ''
+  editingRecipe.value = null
   isFormOpen.value = true
 }
 
-async function handleCreated(recipe: Recipe): Promise<void> {
+function openEditForm(recipe: Recipe): void {
+  successMessage.value = ''
+  editingRecipe.value = recipe
+  isFormOpen.value = true
+}
+
+function closeForm(): void {
   isFormOpen.value = false
-  successMessage.value = `„${recipe.title}“ wurde gespeichert.`
+  editingRecipe.value = null
+}
+
+async function handleSaved(recipe: Recipe): Promise<void> {
+  const wasEditing = editingRecipe.value !== null
+
+  closeForm()
+
+  successMessage.value = wasEditing
+    ? `„${recipe.title}“ wurde aktualisiert.`
+    : `„${recipe.title}“ wurde gespeichert.`
 
   await loadRecipes()
 }
@@ -55,7 +73,7 @@ onMounted(loadRecipes)
         type="button"
         class="action-button"
         :disabled="isLoading"
-        @click="openForm"
+        @click="openCreateForm"
       >
         Rezept anlegen
       </button>
@@ -66,18 +84,29 @@ onMounted(loadRecipes)
     {{ successMessage }}
   </p>
 
-  <RecipeForm v-if="isFormOpen" @created="handleCreated" @cancel="isFormOpen = false" />
+  <RecipeForm
+    v-if="isFormOpen"
+    :key="editingRecipe?.id ?? 'new'"
+    :recipe="editingRecipe"
+    @saved="handleSaved"
+    @cancel="closeForm"
+  />
 
   <p v-if="isLoading" class="empty-state" role="status">Rezepte werden geladen …</p>
 
   <div v-else-if="errorMessage" class="empty-state" role="alert">
     <p class="error-message">{{ errorMessage }}</p>
-    <button type="button" class="action-button retry-button" @click="loadRecipes">
+    <button
+      type="button"
+      class="action-button retry-button"
+      :disabled="isFormOpen"
+      @click="loadRecipes"
+    >
       Erneut versuchen
     </button>
   </div>
 
-  <RecipeList v-else :recipes="recipes" />
+  <RecipeList v-else :recipes="recipes" :actions-disabled="isFormOpen" @edit="openEditForm" />
 </template>
 
 <style scoped>

@@ -2,8 +2,18 @@
 import type { Recipe } from '@/types/recipe'
 import { formatIngredientAmount } from '@/utils/formatIngredient'
 
-defineProps<{
-  recipes: Recipe[]
+withDefaults(
+  defineProps<{
+    recipes: Recipe[]
+    actionsDisabled?: boolean
+  }>(),
+  {
+    actionsDisabled: false,
+  },
+)
+
+const emit = defineEmits<{
+  edit: [recipe: Recipe]
 }>()
 </script>
 
@@ -44,6 +54,18 @@ defineProps<{
             <summary>Zubereitung</summary>
             <p>{{ recipe.instructions }}</p>
           </details>
+
+          <footer class="recipe-actions">
+            <button
+              type="button"
+              class="edit-button"
+              :disabled="actionsDisabled"
+              :aria-label="`Rezept ${recipe.title} bearbeiten`"
+              @click="emit('edit', recipe)"
+            >
+              Bearbeiten
+            </button>
+          </footer>
         </article>
       </li>
     </ul>
@@ -51,3 +73,30 @@ defineProps<{
     <p v-else class="empty-state">Es sind noch keine Rezepte vorhanden.</p>
   </section>
 </template>
+
+<style scoped>
+.recipe-actions {
+  margin-top: 20px;
+}
+
+.edit-button {
+  padding: 10px 16px;
+  border: 1px solid var(--color-primary);
+  border-radius: 8px;
+  color: var(--color-primary);
+  background-color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.edit-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.edit-button:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+</style>

@@ -63,4 +63,31 @@ describe('RecipeList', () => {
     expect(wrapper.find('article').exists()).toBe(false)
     expect(wrapper.get('.empty-state').text()).toBe('Es sind noch keine Rezepte vorhanden.')
   })
+
+  it('meldet das ausgewählte Rezept beim Klick auf Bearbeiten', async () => {
+    const wrapper = mount(RecipeList, {
+      props: {
+        recipes,
+      },
+    })
+
+    await wrapper.get('.edit-button').trigger('click')
+
+    expect(wrapper.emitted('edit')).toEqual([[recipes[0]]])
+  })
+
+  it('verhindert Bearbeiten, wenn die Aktionen gesperrt sind', async () => {
+    const wrapper = mount(RecipeList, {
+      props: {
+        recipes,
+        actionsDisabled: true,
+      },
+    })
+
+    expect(wrapper.get('.edit-button').attributes('disabled')).toBeDefined()
+
+    await wrapper.get('.edit-button').trigger('click')
+
+    expect(wrapper.emitted('edit')).toBeUndefined()
+  })
 })

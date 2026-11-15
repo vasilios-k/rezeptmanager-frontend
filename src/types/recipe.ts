@@ -21,15 +21,15 @@ export interface Recipe {
   servings: number
 }
 
-export interface CreateRecipeIngredientRequest {
+export interface RecipeIngredientRequest {
   ingredientName: string
   quantity: number
   unit: Unit
 }
 
-export interface CreateRecipeRequest {
+export interface RecipeRequest {
   title: string
-  ingredients: CreateRecipeIngredientRequest[]
+  ingredients: RecipeIngredientRequest[]
   instructions: string
   prepTimeMinutes: number
   servings: number
