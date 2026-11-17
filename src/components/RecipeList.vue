@@ -20,7 +20,7 @@ const emit = defineEmits<{
 
 <template>
   <section aria-label="Rezeptübersicht">
-    <p class="recipe-count">
+    <p class="recipe-count" role="status" aria-atomic="true">
       {{ recipes.length }}
       {{ recipes.length === 1 ? 'Rezept' : 'Rezepte' }}
     </p>
@@ -81,7 +81,9 @@ const emit = defineEmits<{
       </li>
     </ul>
 
-    <p v-else class="empty-state">Es sind noch keine Rezepte vorhanden.</p>
+    <p v-else class="empty-state">
+      <slot name="empty">Es sind noch keine Rezepte vorhanden.</slot>
+    </p>
   </section>
 </template>
 

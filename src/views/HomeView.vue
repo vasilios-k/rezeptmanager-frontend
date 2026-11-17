@@ -3,10 +3,13 @@ import { computed, nextTick, onMounted, ref } from 'vue'
 import RecipeDeleteConfirmation from '@/components/RecipeDeleteConfirmation.vue'
 import RecipeForm from '@/components/RecipeForm.vue'
 import RecipeList from '@/components/RecipeList.vue'
+import RecipeSearch from '@/components/RecipeSearch.vue'
 import { getRecipes } from '@/services/recipeService'
 import type { Recipe } from '@/types/recipe'
+import { filterRecipes } from '@/utils/filterRecipes'
 
 const recipes = ref<Recipe[]>([])
+const searchQuery = ref('')
 const isLoading = ref(true)
 const errorMessage = ref('')
 const isFormOpen = ref(false)
@@ -18,6 +21,10 @@ const pageHeading = ref<HTMLHeadingElement | null>(null)
 let deleteTriggerElement: HTMLElement | null = null
 
 const actionsDisabled = computed(() => isFormOpen.value || recipeToDelete.value !== null)
+
+const filteredRecipes = computed(() => filterRecipes(recipes.value, searchQuery.value))
+
+const hasSearchQuery = computed(() => searchQuery.value.trim().length > 0)
 
 async function loadRecipes(): Promise<void> {
   isLoading.value = true
@@ -59,6 +66,7 @@ async function handleSaved(recipe: Recipe): Promise<void> {
   const wasEditing = editingRecipe.value !== null
 
   closeForm()
+  searchQuery.value = ''
 
   successMessage.value = wasEditing
     ? `„${recipe.title}“ wurde aktualisiert.`
@@ -160,13 +168,20 @@ onMounted(loadRecipes)
     </button>
   </div>
 
-  <RecipeList
-    v-else
-    :recipes="recipes"
-    :actions-disabled="actionsDisabled"
-    @edit="openEditForm"
-    @delete="openDeleteConfirmation"
-  />
+  <template v-else>
+    <RecipeSearch v-if="recipes.length > 0" v-model="searchQuery" :disabled="actionsDisabled" />
+
+    <RecipeList
+      :recipes="filteredRecipes"
+      :actions-disabled="actionsDisabled"
+      @edit="openEditForm"
+      @delete="openDeleteConfirmation"
+    >
+      <template v-if="hasSearchQuery && recipes.length > 0" #empty>
+        Keine passenden Rezepte für „{{ searchQuery.trim() }}“ gefunden.
+      </template>
+    </RecipeList>
+  </template>
 </template>
 
 <style scoped>
