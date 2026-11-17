@@ -18,7 +18,7 @@ const recipeToDelete = ref<Recipe | null>(null)
 const successMessage = ref('')
 const pageHeading = ref<HTMLHeadingElement | null>(null)
 
-let deleteTriggerElement: HTMLElement | null = null
+let dialogTriggerElement: HTMLElement | null = null
 
 const actionsDisabled = computed(() => isFormOpen.value || recipeToDelete.value !== null)
 
@@ -45,27 +45,52 @@ async function focusPageHeading(): Promise<void> {
   pageHeading.value?.focus()
 }
 
+function rememberDialogTrigger(): void {
+  const activeElement = document.activeElement
+
+  dialogTriggerElement = activeElement instanceof HTMLElement ? activeElement : null
+}
+
+async function restoreDialogTrigger(): Promise<void> {
+  const triggerElement = dialogTriggerElement
+  dialogTriggerElement = null
+
+  await nextTick()
+
+  if (triggerElement?.isConnected) {
+    triggerElement.focus({ preventScroll: true })
+  } else {
+    pageHeading.value?.focus({ preventScroll: true })
+  }
+}
+
 function openCreateForm(): void {
-  successMessage.value = ''
+  rememberDialogTrigger()
   editingRecipe.value = null
   isFormOpen.value = true
 }
 
 function openEditForm(recipe: Recipe): void {
-  successMessage.value = ''
+  rememberDialogTrigger()
   editingRecipe.value = recipe
   isFormOpen.value = true
 }
 
-function closeForm(): void {
+function resetForm(): void {
   isFormOpen.value = false
   editingRecipe.value = null
+}
+
+async function cancelForm(): Promise<void> {
+  resetForm()
+  await restoreDialogTrigger()
 }
 
 async function handleSaved(recipe: Recipe): Promise<void> {
   const wasEditing = editingRecipe.value !== null
 
-  closeForm()
+  resetForm()
+  dialogTriggerElement = null
   searchQuery.value = ''
 
   successMessage.value = wasEditing
@@ -77,31 +102,18 @@ async function handleSaved(recipe: Recipe): Promise<void> {
 }
 
 function openDeleteConfirmation(recipe: Recipe): void {
-  const activeElement = document.activeElement
-
-  deleteTriggerElement = activeElement instanceof HTMLElement ? activeElement : null
-
+  rememberDialogTrigger()
   recipeToDelete.value = recipe
 }
 
 async function cancelDelete(): Promise<void> {
-  const triggerElement = deleteTriggerElement
-
   recipeToDelete.value = null
-  deleteTriggerElement = null
-
-  await nextTick()
-
-  if (triggerElement?.isConnected) {
-    triggerElement.focus({ preventScroll: true })
-  } else {
-    pageHeading.value?.focus({ preventScroll: true })
-  }
+  await restoreDialogTrigger()
 }
 
 async function handleDeleted(recipe: Recipe): Promise<void> {
   recipeToDelete.value = null
-  deleteTriggerElement = null
+  dialogTriggerElement = null
   successMessage.value = `„${recipe.title}“ wurde gelöscht.`
 
   await loadRecipes()
@@ -122,7 +134,6 @@ onMounted(loadRecipes)
       </div>
 
       <button
-        v-if="!isFormOpen"
         type="button"
         class="action-button"
         :disabled="isLoading || actionsDisabled"
@@ -144,7 +155,7 @@ onMounted(loadRecipes)
     :key="editingRecipe?.id ?? 'new'"
     :recipe="editingRecipe"
     @saved="handleSaved"
-    @cancel="closeForm"
+    @cancel="cancelForm"
   />
 
   <RecipeDeleteConfirmation
