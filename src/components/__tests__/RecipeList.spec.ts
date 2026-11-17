@@ -76,7 +76,19 @@ describe('RecipeList', () => {
     expect(wrapper.emitted('edit')).toEqual([[recipes[0]]])
   })
 
-  it('verhindert Bearbeiten, wenn die Aktionen gesperrt sind', async () => {
+  it('meldet das ausgewählte Rezept beim Klick auf Löschen', async () => {
+    const wrapper = mount(RecipeList, {
+      props: {
+        recipes,
+      },
+    })
+
+    await wrapper.get('.delete-button').trigger('click')
+
+    expect(wrapper.emitted('delete')).toEqual([[recipes[0]]])
+  })
+
+  it('sperrt Bearbeiten und Löschen während einer anderen Aktion', async () => {
     const wrapper = mount(RecipeList, {
       props: {
         recipes,
@@ -86,8 +98,12 @@ describe('RecipeList', () => {
 
     expect(wrapper.get('.edit-button').attributes('disabled')).toBeDefined()
 
+    expect(wrapper.get('.delete-button').attributes('disabled')).toBeDefined()
+
     await wrapper.get('.edit-button').trigger('click')
+    await wrapper.get('.delete-button').trigger('click')
 
     expect(wrapper.emitted('edit')).toBeUndefined()
+    expect(wrapper.emitted('delete')).toBeUndefined()
   })
 })

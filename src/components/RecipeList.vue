@@ -14,6 +14,7 @@ withDefaults(
 
 const emit = defineEmits<{
   edit: [recipe: Recipe]
+  delete: [recipe: Recipe]
 }>()
 </script>
 
@@ -58,12 +59,22 @@ const emit = defineEmits<{
           <footer class="recipe-actions">
             <button
               type="button"
-              class="edit-button"
+              class="recipe-action-button edit-button"
               :disabled="actionsDisabled"
               :aria-label="`Rezept ${recipe.title} bearbeiten`"
               @click="emit('edit', recipe)"
             >
               Bearbeiten
+            </button>
+
+            <button
+              type="button"
+              class="recipe-action-button delete-button"
+              :disabled="actionsDisabled"
+              :aria-label="`Rezept ${recipe.title} löschen`"
+              @click="emit('delete', recipe)"
+            >
+              Löschen
             </button>
           </footer>
         </article>
@@ -76,10 +87,14 @@ const emit = defineEmits<{
 
 <style scoped>
 .recipe-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   margin-top: 20px;
 }
 
-.edit-button {
+.recipe-action-button {
+  min-height: 44px;
   padding: 10px 16px;
   border: 1px solid var(--color-primary);
   border-radius: 8px;
@@ -90,12 +105,17 @@ const emit = defineEmits<{
   cursor: pointer;
 }
 
-.edit-button:disabled {
+.delete-button {
+  border-color: #a52f2f;
+  color: #a52f2f;
+}
+
+.recipe-action-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.edit-button:focus-visible {
+.recipe-action-button:focus-visible {
   outline: 3px solid var(--color-primary);
   outline-offset: 3px;
 }

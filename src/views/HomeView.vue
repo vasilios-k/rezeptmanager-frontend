@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
+import RecipeDeleteConfirmation from '@/components/RecipeDeleteConfirmation.vue'
 import RecipeForm from '@/components/RecipeForm.vue'
 import RecipeList from '@/components/RecipeList.vue'
 import { getRecipes } from '@/services/recipeService'
@@ -10,7 +11,13 @@ const isLoading = ref(true)
 const errorMessage = ref('')
 const isFormOpen = ref(false)
 const editingRecipe = ref<Recipe | null>(null)
+const recipeToDelete = ref<Recipe | null>(null)
 const successMessage = ref('')
+const pageHeading = ref<HTMLHeadingElement | null>(null)
+
+let deleteTriggerElement: HTMLElement | null = null
+
+const actionsDisabled = computed(() => isFormOpen.value || recipeToDelete.value !== null)
 
 async function loadRecipes(): Promise<void> {
   isLoading.value = true
@@ -24,6 +31,11 @@ async function loadRecipes(): Promise<void> {
   } finally {
     isLoading.value = false
   }
+}
+
+async function focusPageHeading(): Promise<void> {
+  await nextTick()
+  pageHeading.value?.focus()
 }
 
 function openCreateForm(): void {
@@ -53,6 +65,39 @@ async function handleSaved(recipe: Recipe): Promise<void> {
     : `„${recipe.title}“ wurde gespeichert.`
 
   await loadRecipes()
+  await focusPageHeading()
+}
+
+function openDeleteConfirmation(recipe: Recipe): void {
+  const activeElement = document.activeElement
+
+  deleteTriggerElement = activeElement instanceof HTMLElement ? activeElement : null
+
+  recipeToDelete.value = recipe
+}
+
+async function cancelDelete(): Promise<void> {
+  const triggerElement = deleteTriggerElement
+
+  recipeToDelete.value = null
+  deleteTriggerElement = null
+
+  await nextTick()
+
+  if (triggerElement?.isConnected) {
+    triggerElement.focus({ preventScroll: true })
+  } else {
+    pageHeading.value?.focus({ preventScroll: true })
+  }
+}
+
+async function handleDeleted(recipe: Recipe): Promise<void> {
+  recipeToDelete.value = null
+  deleteTriggerElement = null
+  successMessage.value = `„${recipe.title}“ wurde gelöscht.`
+
+  await loadRecipes()
+  await focusPageHeading()
 }
 
 onMounted(loadRecipes)
@@ -64,7 +109,7 @@ onMounted(loadRecipes)
 
     <div class="page-heading">
       <div>
-        <h1>Meine Rezepte</h1>
+        <h1 ref="pageHeading" tabindex="-1">Meine Rezepte</h1>
         <p class="page-description">Zutaten, Mengen und Zubereitung im Überblick.</p>
       </div>
 
@@ -72,7 +117,7 @@ onMounted(loadRecipes)
         v-if="!isFormOpen"
         type="button"
         class="action-button"
-        :disabled="isLoading"
+        :disabled="isLoading || actionsDisabled"
         @click="openCreateForm"
       >
         Rezept anlegen
@@ -80,9 +125,11 @@ onMounted(loadRecipes)
     </div>
   </section>
 
-  <p v-if="successMessage" class="success-message" role="status">
-    {{ successMessage }}
-  </p>
+  <div role="status" aria-atomic="true">
+    <p v-if="successMessage" class="success-message">
+      {{ successMessage }}
+    </p>
+  </div>
 
   <RecipeForm
     v-if="isFormOpen"
@@ -92,6 +139,13 @@ onMounted(loadRecipes)
     @cancel="closeForm"
   />
 
+  <RecipeDeleteConfirmation
+    v-if="recipeToDelete"
+    :recipe="recipeToDelete"
+    @deleted="handleDeleted"
+    @cancel="cancelDelete"
+  />
+
   <p v-if="isLoading" class="empty-state" role="status">Rezepte werden geladen …</p>
 
   <div v-else-if="errorMessage" class="empty-state" role="alert">
@@ -99,14 +153,20 @@ onMounted(loadRecipes)
     <button
       type="button"
       class="action-button retry-button"
-      :disabled="isFormOpen"
+      :disabled="actionsDisabled"
       @click="loadRecipes"
     >
       Erneut versuchen
     </button>
   </div>
 
-  <RecipeList v-else :recipes="recipes" :actions-disabled="isFormOpen" @edit="openEditForm" />
+  <RecipeList
+    v-else
+    :recipes="recipes"
+    :actions-disabled="actionsDisabled"
+    @edit="openEditForm"
+    @delete="openDeleteConfirmation"
+  />
 </template>
 
 <style scoped>

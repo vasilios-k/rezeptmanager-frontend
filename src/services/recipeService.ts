@@ -57,3 +57,16 @@ export async function updateRecipe(id: number, request: RecipeRequest): Promise<
 
   return (await response.json()) as Recipe
 }
+
+export async function deleteRecipe(id: number): Promise<void> {
+  const response = await fetch(`${getRecipesUrl()}/${id}`, {
+    method: 'DELETE',
+    headers: {
+      Accept: 'application/json',
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error(`Das Löschen ist fehlgeschlagen: HTTP ${response.status}`)
+  }
+}

@@ -118,4 +118,38 @@ describe('recipeService', () => {
       'Das Aktualisieren ist fehlgeschlagen: HTTP 400',
     )
   })
+
+  it('löscht über DELETE und verarbeitet eine leere 204-Antwort', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(null, {
+        status: 204,
+      }),
+    )
+
+    const { deleteRecipe } = await import('@/services/recipeService')
+
+    await expect(deleteRecipe(42)).resolves.toBeUndefined()
+
+    expect(fetchMock).toHaveBeenCalledWith('https://api.example.test/api/recipes/42', {
+      method: 'DELETE',
+      headers: {
+        Accept: 'application/json',
+      },
+    })
+  })
+
+  it('meldet eine fehlgeschlagene DELETE-Anfrage als Fehler', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(
+        {
+          message: 'Serverfehler',
+        },
+        500,
+      ),
+    )
+
+    const { deleteRecipe } = await import('@/services/recipeService')
+
+    await expect(deleteRecipe(42)).rejects.toThrow('Das Löschen ist fehlgeschlagen: HTTP 500')
+  })
 })
