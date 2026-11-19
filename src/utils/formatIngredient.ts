@@ -12,11 +12,15 @@ export const unitLabels: Record<Unit, string> = {
 }
 
 const quantityFormatter = new Intl.NumberFormat('de-DE', {
-  maximumFractionDigits: 20,
+  maximumFractionDigits: 3,
 })
 
 export function formatIngredientAmount(item: RecipeIngredient): string {
-  const unitLabel = item.unit === 'PINCH' && item.quantity !== 1 ? 'Prisen' : unitLabels[item.unit]
+  const quantityLabel =
+    item.quantity > 0 && item.quantity < 0.001 ? '< 0,001' : quantityFormatter.format(item.quantity)
 
-  return `${quantityFormatter.format(item.quantity)} ${unitLabel}`
+  const unitLabel =
+    item.unit === 'PINCH' && quantityLabel !== '1' ? 'Prisen' : unitLabels[item.unit]
+
+  return `${quantityLabel} ${unitLabel}`
 }
