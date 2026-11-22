@@ -38,6 +38,7 @@ const errorMessage = ref('')
 let activeRequest: AbortController | null = null
 let previousOverflow = ''
 let previousGutter = ''
+let pointerStartedOnBackdrop = false
 
 const existing = priceState.prices[priceKey(props.item)]
 const productName = ref(existing?.productName ?? props.item.ingredient.name)
@@ -56,6 +57,36 @@ const compatibleUnits = computed<Unit[]>(() => {
   if (baseUnit === 'MILLILITER') return ['MILLILITER', 'LITER']
   return [baseUnit]
 })
+
+function isBackdropEvent(event: MouseEvent): boolean {
+  const element = dialog.value
+
+  if (!element || event.target !== element) return false
+
+  const bounds = element.getBoundingClientRect()
+
+  return (
+    event.clientX < bounds.left ||
+    event.clientX > bounds.right ||
+    event.clientY < bounds.top ||
+    event.clientY > bounds.bottom
+  )
+}
+
+function handlePointerDown(event: PointerEvent): void {
+  pointerStartedOnBackdrop = event.isPrimary && event.button === 0 && isBackdropEvent(event)
+}
+
+function handleBackdropClick(event: MouseEvent): void {
+  const shouldClose = pointerStartedOnBackdrop && isBackdropEvent(event)
+  pointerStartedOnBackdrop = false
+
+  if (shouldClose) emit('close')
+}
+
+function cancelBackdropClick(): void {
+  pointerStartedOnBackdrop = false
+}
 
 function changeMode(value: 'api' | 'manual'): void {
   activeRequest?.abort()
@@ -169,6 +200,9 @@ onBeforeUnmount(() => {
     ref="dialog"
     class="price-dialog"
     aria-labelledby="price-dialog-title"
+    @pointerdown="handlePointerDown"
+    @pointercancel="cancelBackdropClick"
+    @click="handleBackdropClick"
     @cancel.prevent="emit('close')"
   >
     <header class="price-dialog-header">
