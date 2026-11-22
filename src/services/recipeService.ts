@@ -24,6 +24,21 @@ export async function getRecipes(): Promise<Recipe[]> {
   return (await response.json()) as Recipe[]
 }
 
+export async function getRecipe(id: number, signal?: AbortSignal): Promise<Recipe | null> {
+  const response = await fetch(`${getRecipesUrl()}/${id}`, {
+    headers: { Accept: 'application/json' },
+    signal,
+  })
+
+  if (response.status === 404) return null
+
+  if (!response.ok) {
+    throw new Error(`Die Rezeptabfrage ist fehlgeschlagen: HTTP ${response.status}`)
+  }
+
+  return (await response.json()) as Recipe
+}
+
 export async function createRecipe(request: RecipeRequest): Promise<Recipe> {
   const response = await fetch(getRecipesUrl(), {
     method: 'POST',
