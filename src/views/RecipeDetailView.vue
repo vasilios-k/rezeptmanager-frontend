@@ -171,15 +171,6 @@ onBeforeUnmount(() => activeRequest?.abort())
           </li>
         </ul>
 
-        <button
-          type="button"
-          class="detail-button reset-ingredients"
-          :disabled="checkedIngredients.length === 0"
-          @click="checkedIngredients = []"
-        >
-          Häkchen zurücksetzen
-        </button>
-
         <p class="checklist-hint">
           Bei einer Änderung der Portionen werden die Häkchen zurückgesetzt.
         </p>
@@ -331,15 +322,6 @@ onBeforeUnmount(() => activeRequest?.abort())
   font: inherit;
   font-weight: 600;
   cursor: pointer;
-}
-
-.detail-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.reset-ingredients {
-  margin-top: 20px;
 }
 
 .detail-button:focus-visible,

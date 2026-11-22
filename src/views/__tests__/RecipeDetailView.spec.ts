@@ -118,7 +118,7 @@ describe('RecipeDetailView', () => {
     expect(wrapper.get('h1').text()).toBe('Pfannkuchen')
   })
 
-  it('erlaubt das Abhaken und Zurücksetzen der Zutaten', async () => {
+  it('erlaubt das Abhaken und erneute Abwählen einzelner Zutaten', async () => {
     fetchMock.mockResolvedValue(jsonResponse(recipe))
 
     const { wrapper } = await mountPage()
@@ -129,9 +129,10 @@ describe('RecipeDetailView', () => {
     expect(wrapper.get('.checklist-status').text()).toBe('1 von 2 Zutaten abgehakt')
     expect(wrapper.get('input[type="checkbox"]').element).toHaveProperty('checked', true)
 
-    await wrapper.get('.reset-ingredients').trigger('click')
+    await wrapper.get('input[type="checkbox"]').setValue(false)
 
     expect(wrapper.get('input[type="checkbox"]').element).toHaveProperty('checked', false)
+    expect(wrapper.get('.checklist-status').text()).toBe('0 von 2 Zutaten abgehakt')
   })
 
   it('passt die Mengen an und setzt die Häkchen bei Portionsänderungen zurück', async () => {
