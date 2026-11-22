@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import RecipePortions from '@/components/RecipePortions.vue'
+import RecipeCosts from '@/components/RecipeCosts.vue'
 import { getRecipes } from '@/services/recipeService'
 import {
   pruneShoppingChecks,
@@ -18,12 +19,15 @@ const recipes = ref<Recipe[]>([])
 const isLoading = ref(true)
 const errorMessage = ref('')
 const removedCount = ref(0)
+
 let isActive = true
 
 const selectionsById = computed(
   () => new Map(shoppingListState.selections.map((item) => [item.recipeId, item.servings])),
 )
+
 const items = computed(() => buildShoppingList(recipes.value, shoppingListState.selections))
+
 const checkedCount = computed(
   () => items.value.filter((item) => shoppingListState.checkedKeys.includes(item.signature)).length,
 )
@@ -43,6 +47,7 @@ async function loadRecipes(): Promise<void> {
     if (!isActive) return
 
     console.error('Rezepte für die Einkaufsliste konnten nicht geladen werden:', error)
+
     errorMessage.value = 'Die Rezepte konnten nicht geladen werden. Deine Auswahl bleibt erhalten.'
   } finally {
     isLoading.value = false
@@ -50,12 +55,17 @@ async function loadRecipes(): Promise<void> {
 }
 
 function selectRecipe(recipe: Recipe, event: Event): void {
-  if ((event.target as HTMLInputElement).checked) setShoppingRecipe(recipe, recipe.servings)
-  else removeShoppingRecipe(recipe.id)
+  if ((event.target as HTMLInputElement).checked) {
+    setShoppingRecipe(recipe, recipe.servings)
+  } else {
+    removeShoppingRecipe(recipe.id)
+  }
 }
 
 function updateServings(recipe: Recipe, servings: number): void {
-  if (selectionsById.value.has(recipe.id)) setShoppingRecipe(recipe, servings)
+  if (selectionsById.value.has(recipe.id)) {
+    setShoppingRecipe(recipe, servings)
+  }
 }
 
 function checkItem(signature: string, event: Event): void {
@@ -69,6 +79,7 @@ watch([items, isLoading], () => {
 })
 
 onMounted(loadRecipes)
+
 onBeforeUnmount(() => {
   isActive = false
 })
@@ -78,6 +89,7 @@ onBeforeUnmount(() => {
   <header class="page-intro">
     <p class="eyebrow">Für deinen Einkauf</p>
     <h1>Einkaufsliste</h1>
+
     <p class="page-description">
       Wähle Rezepte aus und passe ihre Portionen an. Wir fassen die Zutaten für dich zusammen.
     </p>
@@ -87,6 +99,7 @@ onBeforeUnmount(() => {
 
   <div v-else-if="errorMessage" class="empty-state" role="alert">
     <p>{{ errorMessage }}</p>
+
     <button type="button" class="retry-button" @click="loadRecipes">Erneut versuchen</button>
   </div>
 
@@ -100,6 +113,7 @@ onBeforeUnmount(() => {
     <div class="shopping-layout">
       <section class="shopping-panel" aria-labelledby="selection-heading">
         <h2 id="selection-heading">Rezepte auswählen</h2>
+
         <p class="panel-description" role="status">
           {{ shoppingListState.selections.length }}
           {{
@@ -124,6 +138,7 @@ onBeforeUnmount(() => {
                 :value="recipe.id"
                 @change="selectRecipe(recipe, $event)"
               />
+
               <span>{{ recipe.title }}</span>
             </label>
 
@@ -139,16 +154,20 @@ onBeforeUnmount(() => {
 
       <section class="shopping-panel" aria-labelledby="shopping-items-heading">
         <h2 id="shopping-items-heading">Das brauchst du</h2>
+
         <p v-if="items.length" class="panel-description" role="status" aria-atomic="true">
           {{ checkedCount }} von {{ items.length }} Zutaten eingekauft
         </p>
+
         <p v-else class="shopping-empty">Wähle mindestens ein Rezept aus.</p>
 
         <ul v-if="items.length" class="shopping-items">
           <li
             v-for="item in items"
             :key="item.key"
-            :class="{ checked: shoppingListState.checkedKeys.includes(item.signature) }"
+            :class="{
+              checked: shoppingListState.checkedKeys.includes(item.signature),
+            }"
           >
             <label class="shopping-item-label">
               <input
@@ -157,8 +176,14 @@ onBeforeUnmount(() => {
                 :checked="shoppingListState.checkedKeys.includes(item.signature)"
                 @change="checkItem(item.signature, $event)"
               />
-              <span class="shopping-item-name">{{ item.ingredient.name }}</span>
-              <span class="shopping-item-amount">{{ formatIngredientAmount(item) }}</span>
+
+              <span class="shopping-item-name">
+                {{ item.ingredient.name }}
+              </span>
+
+              <span class="shopping-item-amount">
+                {{ formatIngredientAmount(item) }}
+              </span>
             </label>
           </li>
         </ul>
@@ -169,6 +194,8 @@ onBeforeUnmount(() => {
         </p>
       </section>
     </div>
+
+    <RecipeCosts :ingredients="items" shopping />
 
     <p class="storage-hint">Deine Auswahl und Häkchen bleiben in diesem Browser gespeichert.</p>
   </template>

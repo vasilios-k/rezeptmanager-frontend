@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import RecipePortions from '@/components/RecipePortions.vue'
+import RecipeCosts from '@/components/RecipeCosts.vue'
 import { getRecipe } from '@/services/recipeService'
 import type { Recipe } from '@/types/recipe'
 import { formatIngredientAmount } from '@/utils/formatIngredient'
@@ -84,9 +85,12 @@ async function loadRecipe(): Promise<void> {
 
     if (controller.signal.aborted) return
 
-    if (loadedRecipe) selectedServings.value = readServings(loadedRecipe.servings)
+    if (loadedRecipe) {
+      selectedServings.value = readServings(loadedRecipe.servings)
+    }
 
     recipe.value = loadedRecipe
+
     document.title = loadedRecipe
       ? `${loadedRecipe.title} | Rezeptmanager`
       : 'Rezept nicht gefunden | Rezeptmanager'
@@ -94,7 +98,9 @@ async function loadRecipe(): Promise<void> {
     if (controller.signal.aborted) return
 
     console.error('Rezept konnte nicht geladen werden:', error)
+
     errorMessage.value = 'Das Rezept konnte nicht geladen werden. Bitte versuche es erneut.'
+
     document.title = 'Rezept laden | Rezeptmanager'
   } finally {
     if (!controller.signal.aborted) {
@@ -131,6 +137,7 @@ onBeforeUnmount(() => activeRequest?.abort())
 
   <section v-else-if="errorMessage" class="empty-state detail-state" role="alert">
     <h1 ref="pageHeading" tabindex="-1">Rezept konnte nicht geladen werden</h1>
+
     <p>{{ errorMessage }}</p>
 
     <button type="button" class="detail-button retry-button" @click="loadRecipe">
@@ -141,7 +148,10 @@ onBeforeUnmount(() => activeRequest?.abort())
   <article v-else-if="recipe" class="recipe-detail">
     <header class="detail-header">
       <p class="eyebrow">Dein Rezept</p>
-      <h1 ref="pageHeading" tabindex="-1">{{ recipe.title }}</h1>
+
+      <h1 ref="pageHeading" tabindex="-1">
+        {{ recipe.title }}
+      </h1>
 
       <div class="recipe-meta">
         <span>{{ recipe.prepTimeMinutes }} Min.</span>
@@ -165,8 +175,14 @@ onBeforeUnmount(() => activeRequest?.abort())
           >
             <label>
               <input v-model="checkedIngredients" type="checkbox" :value="item.ingredient.id" />
-              <span class="ingredient-name">{{ item.ingredient.name }}</span>
-              <span class="ingredient-amount">{{ formatIngredientAmount(item) }}</span>
+
+              <span class="ingredient-name">
+                {{ item.ingredient.name }}
+              </span>
+
+              <span class="ingredient-amount">
+                {{ formatIngredientAmount(item) }}
+              </span>
             </label>
           </li>
         </ul>
@@ -186,10 +202,13 @@ onBeforeUnmount(() => activeRequest?.abort())
         </ol>
       </section>
     </div>
+
+    <RecipeCosts :ingredients="displayedIngredients" :servings="selectedServings" />
   </article>
 
   <section v-else class="empty-state detail-state">
     <h1 ref="pageHeading" tabindex="-1">Rezept nicht gefunden</h1>
+
     <p>Unter dieser Adresse ist kein Rezept vorhanden.</p>
   </section>
 </template>
