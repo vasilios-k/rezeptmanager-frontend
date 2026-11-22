@@ -11,7 +11,8 @@ import { RouterLink, RouterView } from 'vue-router'
       </RouterLink>
 
       <nav aria-label="Hauptnavigation">
-        <RouterLink to="/" class="navigation-link"> Meine Rezepte </RouterLink>
+        <RouterLink to="/" class="navigation-link">Meine Rezepte</RouterLink>
+        <RouterLink to="/shopping-list" class="navigation-link">Einkaufsliste</RouterLink>
       </nav>
     </div>
   </header>
@@ -20,3 +21,28 @@ import { RouterLink, RouterView } from 'vue-router'
     <RouterView />
   </main>
 </template>
+
+<style scoped>
+.app-header-inner {
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  padding-block: 16px;
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+
+.navigation-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.navigation-link.router-link-exact-active {
+  text-decoration: underline;
+  text-underline-offset: 5px;
+}
+</style>

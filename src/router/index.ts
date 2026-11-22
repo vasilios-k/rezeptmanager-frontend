@@ -8,12 +8,20 @@ const router = createRouter({
       path: '/',
       name: 'recipes',
       component: HomeView,
+      meta: { title: 'Meine Rezepte' },
     },
     {
       path: '/recipes/:id',
       name: 'recipe-detail',
       component: () => import('@/views/RecipeDetailView.vue'),
       props: true,
+      meta: { title: 'Rezept' },
+    },
+    {
+      path: '/shopping-list',
+      name: 'shopping-list',
+      component: () => import('@/views/ShoppingListView.vue'),
+      meta: { title: 'Einkaufsliste' },
     },
   ],
   scrollBehavior(to, from, savedPosition) {
@@ -27,8 +35,7 @@ const router = createRouter({
 router.afterEach((to, from) => {
   if (to.path === from.path && from.matched.length > 0) return
 
-  document.title =
-    to.name === 'recipe-detail' ? 'Rezept | Rezeptmanager' : 'Meine Rezepte | Rezeptmanager'
+  document.title = `${typeof to.meta.title === 'string' ? to.meta.title : 'Meine Rezepte'} | Rezeptmanager`
 })
 
 export default router
