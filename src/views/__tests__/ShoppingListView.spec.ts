@@ -129,4 +129,36 @@ describe('ShoppingListView', () => {
 
     expect(shoppingListState.selections).toHaveLength(1)
   })
+
+  it('lädt ein auf einem anderen Gerät neu ausgewähltes Rezept nach', async () => {
+    vi.mocked(getRecipes).mockResolvedValueOnce([recipe])
+    wrapper = mount(ShoppingListView)
+    await flushPromises()
+
+    setShoppingRecipe(exampleRecipes[1]!, exampleRecipes[1]!.servings)
+    await flushPromises()
+    expect(wrapper.findAll('.recipe-selection-input')).toHaveLength(2)
+    expect(shoppingListState.selections).toHaveLength(1)
+  })
+
+  it('verliert eine neue synchronisierte Auswahl nicht durch eine bereits laufende ältere Rezeptantwort', async () => {
+    let finish: ((recipes: Recipe[]) => void) | undefined
+    vi.mocked(getRecipes).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve
+        }),
+    )
+    wrapper = mount(ShoppingListView)
+
+    setShoppingRecipe(exampleRecipes[1]!, exampleRecipes[1]!.servings)
+    finish?.([recipe])
+    await flushPromises()
+
+    expect(getRecipes).toHaveBeenCalledTimes(2)
+    expect(shoppingListState.selections).toEqual([
+      { recipeId: 2, servings: exampleRecipes[1]!.servings },
+    ])
+    expect(wrapper.findAll('.recipe-selection-input')).toHaveLength(2)
+  })
 })

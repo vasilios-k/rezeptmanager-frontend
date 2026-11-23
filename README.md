@@ -15,6 +15,16 @@ Produktpreise schätzen.
 - [Backend-Repository](https://github.com/vasilios-k/rezeptmanager-backend)
 - [Öffentlicher Backend-Healthcheck](https://rezeptmanager-backend.onrender.com/api/health)
 
+## Screenshots
+
+Rezeptdetailseite mit Zutaten-Checkliste und Zubereitung:
+
+![Rezeptdetailseite mit Zutaten-Checkliste](docs/screenshots/rezept-detail.jpg)
+
+Gemeinsame Einkaufsliste für mehrere Rezepte:
+
+![Ausgewählte Rezepte und zusammengefasste Einkaufsliste](docs/screenshots/einkaufsliste.jpg)
+
 ## Funktionen und Use Cases
 
 | ID | Use Case | Umsetzung |
@@ -26,7 +36,7 @@ Produktpreise schätzen.
 | UC05 | Rezept bearbeiten | Bestehende Rezeptdaten in einem Dialog ändern und speichern |
 | UC06 | Rezept löschen | Löschung in einem Bestätigungsdialog ausdrücklich bestätigen |
 | UC07 | Portionen anpassen | Zutatenmengen proportional zur gewünschten Portionszahl berechnen |
-| UC08 | Einkaufsliste erstellen | Mehrere Rezepte auswählen und passende Zutatenmengen zusammenfassen |
+| UC08 | Einkaufsliste erstellen | Mehrere Rezepte auswählen, Zutatenmengen zusammenfassen und die Liste zwischen Geräten synchronisieren |
 | UC09 | Zutatenpreise zuordnen | Erfasste Produktpreise suchen oder eigene Packungspreise eingeben |
 | UC10 | Kosten schätzen | Verbrauchskosten, Kosten pro Portion und benötigte Einkaufspackungen berechnen |
 
@@ -42,14 +52,31 @@ Die Anwendung verwendet Auth0 für die Anmeldung.
 - Das Backend prüft die Zugriffsrechte bei jeder Rezeptanfrage.
 - Neue Konten beginnen mit einer leeren Rezeptsammlung.
 - Einkaufsliste, Einkaufshäkchen, Preiszuordnungen und Vorratsmarkierungen
-  werden pro Konto im jeweiligen Browser gespeichert.
+  werden pro Konto über das Backend in PostgreSQL gespeichert.
+- Ein lokaler Browsercache erhält noch nicht synchronisierte Änderungen.
 - Beim Abmelden oder Kontowechsel wird der sichtbare Zustand zurückgesetzt.
 - Die Häkchen auf einer Rezeptdetailseite gelten für die aktuelle Ansicht
   und werden bei einer Portionsänderung zurückgesetzt.
 - Zugriffstokens werden vom Auth0-SDK im Arbeitsspeicher verwaltet.
 
-Einkaufslisten und Preiszuordnungen werden derzeit nicht zwischen
-verschiedenen Browsern oder Geräten synchronisiert.
+Nach der Anmeldung wird der gespeicherte Stand geladen. Änderungen werden
+automatisch gespeichert. Beim Zurückkehren zur App und alle 15 Sekunden,
+solange die Seite sichtbar ist, wird der aktuelle Kontostand abgeglichen.
+So kann eine Einkaufsliste am PC geplant und am Handy verwendet werden.
+
+Beim ersten Start ohne gespeicherte Serverliste werden die bisherigen
+kontobezogenen Browserdaten übernommen. Existiert bereits eine Serverliste,
+ersetzt ein alter Browsercache diese nicht. Noch ausstehende Änderungen
+eines bereits synchronisierten Geräts werden mit dem neuen Stand zusammengeführt.
+
+Die Synchronisierung verwendet Versionsnummern. Gleichzeitige Änderungen
+unterschiedlicher Einträge werden zusammengeführt; bei derselben Auswahl
+oder Preiszuordnung wird die noch ausstehende lokale Änderung angewendet.
+Ändert sich die gemeinsame Rezeptauswahl, werden unpassende Häkchen zurückgesetzt.
+Verbindungsfehler werden angezeigt und können über „Erneut versuchen“ erneut
+abgeglichen werden. Offline ist nur der bereits in diesem Browser geladene
+Stand verfügbar; eine erneute Anmeldung und das Laden der Rezepte benötigen
+eine Verbindung.
 
 ## Technologien
 
@@ -122,7 +149,7 @@ Passwörter oder Client Secrets enthalten.
 | `src/components/` | Wiederverwendbare Oberflächenkomponenten |
 | `src/views/` | Rezeptübersicht, Rezeptdetailseite und Einkaufsliste |
 | `src/services/` | Authentifizierte HTTP-Anfragen an das Backend |
-| `src/stores/` | Zustandsverwaltung und kontobezogener Browserspeicher |
+| `src/stores/` | Zustandsverwaltung, Browsercache und Synchronisierung mit dem Backend |
 | `src/types/` | TypeScript-Datentypen |
 | `src/utils/` | Suche, Mengenformatierung, Portions- und Kostenberechnung |
 | `src/data/` | Beispielrezepte für Tests |
@@ -138,7 +165,7 @@ npm run build
 npm audit
 ```
 
-Der geprüfte Projektstand umfasst 149 Tests in 19 Testdateien.
+Der geprüfte Projektstand umfasst 174 Tests in 22 Testdateien.
 
 Geprüft werden unter anderem:
 
@@ -149,6 +176,8 @@ Geprüft werden unter anderem:
 - Zusammenfassung der Einkaufsliste
 - Preiszuordnungen und Kostenberechnungen
 - Anmeldung, Kontowechsel und getrennte Browserdaten
+- Wiederherstellung auf einem anderen Gerät, Versionskonflikte und Wiederholung fehlgeschlagener Speicherungen
+- Übernahme bisheriger Browserdaten ohne Überschreiben einer vorhandenen Serverliste
 - Übermittlung von Zugriffstokens
 - Abbruch und Verwerfen veralteter HTTP-Anfragen
 

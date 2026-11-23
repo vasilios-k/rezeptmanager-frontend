@@ -64,6 +64,15 @@ function saveState(): void {
   }
 }
 
+export function replacePriceState(next: PriceState): void {
+  if (!activeAccount.value) return
+  state.prices = Object.fromEntries(
+    Object.entries(next.prices).map(([key, price]) => [key, { ...price }]),
+  )
+  state.pantry = { ...next.pantry }
+  saveState()
+}
+
 export function setIngredientPrice(item: RecipeIngredient, price: ProductPrice): void {
   if (!activeAccount.value) return
   if (

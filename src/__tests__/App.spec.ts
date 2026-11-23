@@ -8,6 +8,14 @@ import { activeAccount, setActiveAccount } from '@/auth/accountScope'
 import { setShoppingRecipe, shoppingListState } from '@/stores/shoppingList'
 import { exampleRecipes } from '@/data/exampleRecipes'
 
+vi.mock('@/stores/shoppingSync', () => ({
+  startShoppingSync: () => ({
+    state: { ready: true, loading: false, saving: false, pending: false, error: '' },
+    retry: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    stop: vi.fn<() => void>(),
+  }),
+}))
+
 vi.mock('@/auth/auth0', async () => {
   const { ref } = await import('vue')
   return {

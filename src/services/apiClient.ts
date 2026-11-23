@@ -19,6 +19,16 @@ interface ApiRequestOptions extends RequestInit {
   errorMessage?: string
 }
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(`${message}: HTTP ${status}`)
+    this.name = 'ApiError'
+  }
+}
+
 function aborted(): DOMException {
   return new DOMException('Die Anfrage wurde abgebrochen.', 'AbortError')
 }
@@ -85,7 +95,7 @@ export async function requestApi<T>(path: string, options: ApiRequestOptions = {
 
     if (response.status === 404 && allowNotFound) return null as T
 
-    if (!response.ok) throw new Error(`${errorMessage}: HTTP ${response.status}`)
+    if (!response.ok) throw new ApiError(errorMessage, response.status)
 
     if (response.status === 204) return undefined as T
 

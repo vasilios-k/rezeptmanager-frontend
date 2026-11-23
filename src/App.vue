@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import AuthWelcome from '@/components/auth/AuthWelcome.vue'
 import { auth0 } from '@/auth/auth0'
 import { activeAccount, authNotice, setActiveAccount } from '@/auth/accountScope'
+import { startShoppingSync } from '@/stores/shoppingSync'
 
 const route = useRoute()
 const busy = ref(false)
 const actionError = ref('')
 const { isLoading, isAuthenticated, user, error } = auth0
+const { state: shoppingSync, retry: retrySync, stop: stopSync } = startShoppingSync()
+onBeforeUnmount(stopSync)
 
 watch(
   [isLoading, isAuthenticated, user],
@@ -87,7 +90,34 @@ async function logout(): Promise<void> {
   </header>
 
   <main class="container app-main">
-    <RouterView v-if="signedIn" :key="activeAccount ?? 'anonymous'" />
+    <template v-if="signedIn">
+      <div
+        v-if="shoppingSync.ready"
+        class="sync-feedback"
+        :class="{ 'sync-error': shoppingSync.error }"
+      >
+        <p :role="shoppingSync.error ? 'alert' : 'status'" aria-live="polite">
+          {{
+            shoppingSync.error ||
+            (shoppingSync.loading || shoppingSync.saving || shoppingSync.pending
+              ? 'Einkaufsliste wird synchronisiert …'
+              : 'Einkaufsliste synchronisiert')
+          }}
+        </p>
+        <button
+          v-if="shoppingSync.error"
+          type="button"
+          :disabled="shoppingSync.loading || shoppingSync.saving"
+          @click="retrySync"
+        >
+          Erneut versuchen
+        </button>
+      </div>
+      <RouterView v-if="shoppingSync.ready" :key="activeAccount ?? 'anonymous'" />
+      <p v-else class="empty-state" role="status">
+        Deine gespeicherte Einkaufsliste wird geladen …
+      </p>
+    </template>
     <AuthWelcome
       v-else
       :loading="isLoading"
@@ -100,6 +130,37 @@ async function logout(): Promise<void> {
 </template>
 
 <style scoped>
+.sync-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 20px;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.sync-feedback p {
+  margin: 0;
+}
+.sync-error {
+  color: #a32929;
+}
+.sync-feedback button {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.sync-feedback button:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
 .app-header-inner {
   flex-wrap: wrap;
   gap: 12px 24px;

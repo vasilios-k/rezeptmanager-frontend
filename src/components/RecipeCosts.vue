@@ -188,8 +188,8 @@ function markPantry(item: RecipeIngredient, event: Event): void {
     </p>
 
     <p class="cost-hint">
-      Deine Preiszuordnungen bleiben in diesem Browser gespeichert und werden auch bei anderen
-      Rezepten verwendet.
+      Deine Preiszuordnungen werden mit deinem Konto synchronisiert und auch bei anderen Rezepten
+      verwendet.
     </p>
 
     <IngredientPriceDialog v-if="editingItem" :item="editingItem" @close="closeDialog" />

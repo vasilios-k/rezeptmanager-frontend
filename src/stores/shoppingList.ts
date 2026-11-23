@@ -67,6 +67,13 @@ function saveState(): void {
   }
 }
 
+export function replaceShoppingList(next: ShoppingListState): void {
+  if (!activeAccount.value) return
+  state.selections = next.selections.map((item) => ({ ...item }))
+  state.checkedKeys = [...next.checkedKeys]
+  saveState()
+}
+
 export function setShoppingRecipe(recipe: Recipe, servings: number): void {
   if (!activeAccount.value) return
   if (!isValidServings(servings)) return

@@ -37,12 +37,27 @@ async function loadRecipes(): Promise<void> {
   errorMessage.value = ''
 
   try {
-    const loadedRecipes = await getRecipes()
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const selectedBeforeRequest = new Set(
+        shoppingListState.selections.map((item) => item.recipeId),
+      )
+      const loadedRecipes = await getRecipes()
 
-    if (!isActive) return
+      if (!isActive) return
 
-    removedCount.value = syncShoppingRecipes(loadedRecipes)
-    recipes.value = loadedRecipes
+      // Eine während des Abrufs synchronisierte neue Auswahl darf nicht als gelöscht gelten.
+      const newMissingSelection = shoppingListState.selections.some(
+        (item) =>
+          !selectedBeforeRequest.has(item.recipeId) &&
+          !loadedRecipes.some((recipe) => recipe.id === item.recipeId),
+      )
+      if (newMissingSelection) continue
+
+      removedCount.value = syncShoppingRecipes(loadedRecipes)
+      recipes.value = loadedRecipes
+      return
+    }
+    throw new Error('Die Rezeptauswahl wurde während des Ladens geändert.')
   } catch (error) {
     if (!isActive) return
 
@@ -72,16 +87,47 @@ function checkItem(signature: string, event: Event): void {
   setShoppingItemChecked(signature, (event.target as HTMLInputElement).checked)
 }
 
+watch(
+  () => shoppingListState.selections.map((item) => item.recipeId).join(','),
+  () => {
+    if (
+      !isLoading.value &&
+      shoppingListState.selections.some(
+        (item) => !recipes.value.some((recipe) => recipe.id === item.recipeId),
+      )
+    ) {
+      void loadRecipes()
+    }
+  },
+  { flush: 'sync' },
+)
+
 watch([items, isLoading], () => {
-  if (!isLoading.value && !errorMessage.value) {
+  if (
+    !isLoading.value &&
+    !errorMessage.value &&
+    shoppingListState.selections.every((item) =>
+      recipes.value.some((recipe) => recipe.id === item.recipeId),
+    )
+  ) {
     pruneShoppingChecks(items.value.map((item) => item.signature))
   }
 })
 
-onMounted(loadRecipes)
+function refreshWhenVisible(): void {
+  if (document.visibilityState === 'visible' && !isLoading.value) void loadRecipes()
+}
+
+onMounted(() => {
+  void loadRecipes()
+  window.addEventListener('focus', refreshWhenVisible)
+  document.addEventListener('visibilitychange', refreshWhenVisible)
+})
 
 onBeforeUnmount(() => {
   isActive = false
+  window.removeEventListener('focus', refreshWhenVisible)
+  document.removeEventListener('visibilitychange', refreshWhenVisible)
 })
 </script>
 
@@ -197,7 +243,9 @@ onBeforeUnmount(() => {
 
     <RecipeCosts :ingredients="items" shopping />
 
-    <p class="storage-hint">Deine Auswahl und Häkchen bleiben in diesem Browser gespeichert.</p>
+    <p class="storage-hint">
+      Deine Auswahl und Häkchen werden mit deinem Konto auf anderen Geräten synchronisiert.
+    </p>
   </template>
 </template>
 
