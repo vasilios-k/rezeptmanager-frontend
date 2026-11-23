@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { exampleRecipes } from '@/data/exampleRecipes'
 
-const storageKey = 'rezeptmanager.shopping-list.v1'
+const storageKey = 'rezeptmanager.shopping-list.v1:auth0%7Ctest-user'
 const recipe = exampleRecipes.find((item) => item.id === 1)!
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.resetModules()
+  const { setActiveAccount } = await import('@/auth/accountScope')
+  setActiveAccount('auth0|test-user')
   localStorage.clear()
 })
 
@@ -30,6 +32,8 @@ describe('shopping list storage', () => {
     store.setShoppingItemChecked('1:GRAM:400', true)
 
     vi.resetModules()
+    const { setActiveAccount } = await import('@/auth/accountScope')
+    setActiveAccount('auth0|test-user')
     const restored = await import('@/stores/shoppingList')
 
     expect(restored.shoppingListState.selections).toEqual([{ recipeId: 1, servings: 4 }])

@@ -3,6 +3,10 @@ import { searchPrices } from '@/services/priceService'
 
 vi.hoisted(() => vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.test/'))
 
+vi.mock('@/auth/auth0', () => ({
+  getApiToken: vi.fn<() => Promise<string>>().mockResolvedValue('test-token'),
+}))
+
 const fetchMock = vi.fn<typeof fetch>()
 
 beforeEach(() => {
@@ -25,8 +29,8 @@ describe('priceService', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.example.test/api/prices?query=Mehl+%26+Zucker&unit=GRAM&page=2',
       {
-        headers: { Accept: 'application/json' },
-        signal: controller.signal,
+        headers: expect.any(Headers),
+        signal: expect.any(AbortSignal),
       },
     )
   })

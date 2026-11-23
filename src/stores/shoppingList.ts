@@ -1,4 +1,5 @@
-import { reactive, readonly } from 'vue'
+import { reactive, readonly, watch } from 'vue'
+import { activeAccount, readAccountStorage, writeAccountStorage } from '@/auth/accountScope'
 import type { Recipe } from '@/types/recipe'
 import type { ShoppingListState, ShoppingRecipeSelection } from '@/types/shoppingList'
 import { isValidServings } from '@/utils/scaleRecipe'
@@ -20,7 +21,7 @@ function isSelection(value: unknown): value is ShoppingRecipeSelection {
 
 function loadState(): ShoppingListState {
   try {
-    const parsed: unknown = JSON.parse(localStorage.getItem(storageKey) ?? 'null')
+    const parsed: unknown = JSON.parse(readAccountStorage(storageKey) ?? 'null')
 
     if (typeof parsed === 'object' && parsed !== null) {
       const saved = parsed as { selections?: unknown; checkedKeys?: unknown }
@@ -48,15 +49,26 @@ function loadState(): ShoppingListState {
 const state = reactive(loadState())
 export const shoppingListState = readonly(state)
 
+watch(
+  activeAccount,
+  () => {
+    const next = loadState()
+    state.selections = next.selections
+    state.checkedKeys = next.checkedKeys
+  },
+  { flush: 'sync' },
+)
+
 function saveState(): void {
   try {
-    localStorage.setItem(storageKey, JSON.stringify(state))
+    writeAccountStorage(storageKey, JSON.stringify(state))
   } catch {
     // Die aktuelle Auswahl bleibt für diese Sitzung erhalten.
   }
 }
 
 export function setShoppingRecipe(recipe: Recipe, servings: number): void {
+  if (!activeAccount.value) return
   if (!isValidServings(servings)) return
 
   const value = Math.max(recipe.servings, servings)
@@ -72,6 +84,7 @@ export function setShoppingRecipe(recipe: Recipe, servings: number): void {
 }
 
 export function removeShoppingRecipe(recipeId: number): void {
+  if (!activeAccount.value) return
   if (!state.selections.some((item) => item.recipeId === recipeId)) return
 
   state.selections = state.selections.filter((item) => item.recipeId !== recipeId)
@@ -80,6 +93,7 @@ export function removeShoppingRecipe(recipeId: number): void {
 }
 
 export function setShoppingItemChecked(signature: string, checked: boolean): void {
+  if (!activeAccount.value) return
   const keys = new Set(state.checkedKeys)
 
   if (checked) keys.add(signature)
@@ -90,6 +104,7 @@ export function setShoppingItemChecked(signature: string, checked: boolean): voi
 }
 
 export function syncShoppingRecipes(recipes: readonly Recipe[]): number {
+  if (!activeAccount.value) return 0
   const recipesById = new Map(recipes.map((recipe) => [recipe.id, recipe]))
   const removedCount = state.selections.filter((item) => !recipesById.has(item.recipeId)).length
   const nextSelections = state.selections.flatMap((item) => {
@@ -110,6 +125,7 @@ export function syncShoppingRecipes(recipes: readonly Recipe[]): number {
 }
 
 export function pruneShoppingChecks(signatures: readonly string[]): void {
+  if (!activeAccount.value) return
   const validKeys = new Set(signatures)
   const checkedKeys = state.checkedKeys.filter((key) => validKeys.has(key))
 

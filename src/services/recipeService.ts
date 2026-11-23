@@ -1,87 +1,41 @@
 import type { Recipe, RecipeRequest } from '@/types/recipe'
+import { requestApi } from '@/services/apiClient'
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '')
-
-function getRecipesUrl(): string {
-  if (!apiBaseUrl) {
-    throw new Error('Die Backend-Adresse ist nicht konfiguriert.')
-  }
-
-  return `${apiBaseUrl}/api/recipes`
-}
-
-export async function getRecipes(): Promise<Recipe[]> {
-  const response = await fetch(getRecipesUrl(), {
-    headers: {
-      Accept: 'application/json',
-    },
+export function getRecipes(): Promise<Recipe[]> {
+  return requestApi('/api/recipes', {
+    errorMessage: 'Die Rezeptabfrage ist fehlgeschlagen',
   })
-
-  if (!response.ok) {
-    throw new Error(`Die Rezeptabfrage ist fehlgeschlagen: HTTP ${response.status}`)
-  }
-
-  return (await response.json()) as Recipe[]
 }
 
-export async function getRecipe(id: number, signal?: AbortSignal): Promise<Recipe | null> {
-  const response = await fetch(`${getRecipesUrl()}/${id}`, {
-    headers: { Accept: 'application/json' },
+export function getRecipe(id: number, signal?: AbortSignal): Promise<Recipe | null> {
+  return requestApi(`/api/recipes/${id}`, {
     signal,
+    allowNotFound: true,
+    errorMessage: 'Die Rezeptabfrage ist fehlgeschlagen',
   })
-
-  if (response.status === 404) return null
-
-  if (!response.ok) {
-    throw new Error(`Die Rezeptabfrage ist fehlgeschlagen: HTTP ${response.status}`)
-  }
-
-  return (await response.json()) as Recipe
 }
 
-export async function createRecipe(request: RecipeRequest): Promise<Recipe> {
-  const response = await fetch(getRecipesUrl(), {
+export function createRecipe(request: RecipeRequest): Promise<Recipe> {
+  return requestApi('/api/recipes', {
     method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
+    errorMessage: 'Das Speichern ist fehlgeschlagen',
   })
-
-  if (!response.ok) {
-    throw new Error(`Das Speichern ist fehlgeschlagen: HTTP ${response.status}`)
-  }
-
-  return (await response.json()) as Recipe
 }
 
-export async function updateRecipe(id: number, request: RecipeRequest): Promise<Recipe> {
-  const response = await fetch(`${getRecipesUrl()}/${id}`, {
+export function updateRecipe(id: number, request: RecipeRequest): Promise<Recipe> {
+  return requestApi(`/api/recipes/${id}`, {
     method: 'PUT',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
+    errorMessage: 'Das Aktualisieren ist fehlgeschlagen',
   })
-
-  if (!response.ok) {
-    throw new Error(`Das Aktualisieren ist fehlgeschlagen: HTTP ${response.status}`)
-  }
-
-  return (await response.json()) as Recipe
 }
 
-export async function deleteRecipe(id: number): Promise<void> {
-  const response = await fetch(`${getRecipesUrl()}/${id}`, {
+export function deleteRecipe(id: number): Promise<void> {
+  return requestApi(`/api/recipes/${id}`, {
     method: 'DELETE',
-    headers: {
-      Accept: 'application/json',
-    },
+    errorMessage: 'Das Löschen ist fehlgeschlagen',
   })
-
-  if (!response.ok) {
-    throw new Error(`Das Löschen ist fehlgeschlagen: HTTP ${response.status}`)
-  }
 }

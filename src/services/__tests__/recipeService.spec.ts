@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Recipe, RecipeRequest } from '@/types/recipe'
 
+vi.mock('@/auth/auth0', () => ({
+  getApiToken: vi.fn<() => Promise<string>>().mockResolvedValue('test-token'),
+}))
+
 const fetchMock = vi.fn<typeof fetch>()
 
 const request: RecipeRequest = {
@@ -41,8 +45,10 @@ function jsonResponse(data: unknown, status = 200): Response {
   })
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.resetModules()
+  const { setActiveAccount } = await import('@/auth/accountScope')
+  setActiveAccount('auth0|test-user')
   fetchMock.mockReset()
   vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.test/')
   vi.stubGlobal('fetch', fetchMock)
@@ -61,11 +67,13 @@ describe('recipeService', () => {
     const result = await getRecipes()
 
     expect(fetchMock).toHaveBeenCalledWith('https://api.example.test/api/recipes', {
-      headers: {
-        Accept: 'application/json',
-      },
+      headers: expect.any(Headers),
+      signal: expect.any(AbortSignal),
     })
     expect(result).toEqual([savedRecipe])
+    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get('Authorization')).toBe(
+      'Bearer test-token',
+    )
   })
 
   it('legt ein Rezept über POST an', async () => {
@@ -76,13 +84,14 @@ describe('recipeService', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('https://api.example.test/api/recipes', {
       method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
+      headers: expect.any(Headers),
+      signal: expect.any(AbortSignal),
       body: JSON.stringify(request),
     })
     expect(result).toEqual(savedRecipe)
+    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get('Content-Type')).toBe(
+      'application/json',
+    )
   })
 
   it('aktualisiert ein Rezept über PUT mit seiner ID', async () => {
@@ -93,13 +102,14 @@ describe('recipeService', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('https://api.example.test/api/recipes/42', {
       method: 'PUT',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-      },
+      headers: expect.any(Headers),
+      signal: expect.any(AbortSignal),
       body: JSON.stringify(request),
     })
     expect(result).toEqual(savedRecipe)
+    expect(new Headers(fetchMock.mock.calls[0]?.[1]?.headers).get('Content-Type')).toBe(
+      'application/json',
+    )
   })
 
   it('meldet eine vom Backend abgelehnte Aktualisierung als Fehler', async () => {
@@ -132,9 +142,8 @@ describe('recipeService', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('https://api.example.test/api/recipes/42', {
       method: 'DELETE',
-      headers: {
-        Accept: 'application/json',
-      },
+      headers: expect.any(Headers),
+      signal: expect.any(AbortSignal),
     })
   })
 

@@ -9,6 +9,10 @@ vi.hoisted(() => {
   vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.test')
 })
 
+vi.mock('@/auth/auth0', () => ({
+  getApiToken: vi.fn<() => Promise<string>>().mockResolvedValue('test-token'),
+}))
+
 const fetchMock = vi.fn<typeof fetch>()
 
 const recipe: Recipe = {
@@ -91,7 +95,7 @@ describe('RecipeDetailView', () => {
     await flushPromises()
 
     expect(fetchMock).toHaveBeenCalledWith('https://api.example.test/api/recipes/1', {
-      headers: { Accept: 'application/json' },
+      headers: expect.any(Headers),
       signal: expect.any(AbortSignal),
     })
 

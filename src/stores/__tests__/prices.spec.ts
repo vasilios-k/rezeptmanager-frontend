@@ -22,8 +22,10 @@ const price: ProductPrice = {
   source: 'MANUAL',
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.resetModules()
+  const { setActiveAccount } = await import('@/auth/accountScope')
+  setActiveAccount('auth0|test-user')
   localStorage.clear()
 })
 
@@ -37,6 +39,8 @@ describe('price storage', () => {
     store.setIngredientInPantry(item, true)
 
     vi.resetModules()
+    const { setActiveAccount } = await import('@/auth/accountScope')
+    setActiveAccount('auth0|test-user')
     const restored = await import('@/stores/prices')
 
     expect(restored.priceState.prices['1:GRAM']).toEqual(price)
@@ -71,7 +75,7 @@ describe('price storage', () => {
 
   it('ignoriert beschädigte und unpassende gespeicherte Daten', async () => {
     localStorage.setItem(
-      'rezeptmanager.prices.v1',
+      'rezeptmanager.prices.v1:auth0%7Ctest-user',
       JSON.stringify({
         prices: {
           '1:GRAM': { ...price, currency: 'USD' },

@@ -1,4 +1,5 @@
-import { reactive, readonly } from 'vue'
+import { reactive, readonly, watch } from 'vue'
+import { activeAccount, readAccountStorage, writeAccountStorage } from '@/auth/accountScope'
 import type { RecipeIngredient } from '@/types/recipe'
 import type { PriceState, ProductPrice } from '@/types/prices'
 import { amountSignature, baseAmount, isProductPrice, priceKey } from '@/utils/recipeCosts'
@@ -10,7 +11,7 @@ function loadState(): PriceState {
   const empty: PriceState = { prices: {}, pantry: {} }
 
   try {
-    const saved: unknown = JSON.parse(localStorage.getItem(storageKey) ?? 'null')
+    const saved: unknown = JSON.parse(readAccountStorage(storageKey) ?? 'null')
 
     if (typeof saved !== 'object' || saved === null) return empty
 
@@ -45,15 +46,26 @@ function loadState(): PriceState {
 const state = reactive(loadState())
 export const priceState = readonly(state)
 
+watch(
+  activeAccount,
+  () => {
+    const next = loadState()
+    state.prices = next.prices
+    state.pantry = next.pantry
+  },
+  { flush: 'sync' },
+)
+
 function saveState(): void {
   try {
-    localStorage.setItem(storageKey, JSON.stringify(state))
+    writeAccountStorage(storageKey, JSON.stringify(state))
   } catch {
     // Die Auswahl bleibt für diese Sitzung verfügbar.
   }
 }
 
 export function setIngredientPrice(item: RecipeIngredient, price: ProductPrice): void {
+  if (!activeAccount.value) return
   if (
     !isProductPrice(price) ||
     baseAmount(item.quantity, item.unit).unit !==
@@ -67,11 +79,13 @@ export function setIngredientPrice(item: RecipeIngredient, price: ProductPrice):
 }
 
 export function removeIngredientPrice(item: RecipeIngredient): void {
+  if (!activeAccount.value) return
   delete state.prices[priceKey(item)]
   saveState()
 }
 
 export function setIngredientInPantry(item: RecipeIngredient, checked: boolean): void {
+  if (!activeAccount.value) return
   const key = priceKey(item)
 
   if (checked) state.pantry[key] = amountSignature(item)
